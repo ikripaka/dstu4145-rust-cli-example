@@ -17,5 +17,5 @@ pub enum CliError<'a>
   #[error("Failed to parse hex string, please check validity of it")]
   FailedToParseHex(#[from] num_bigint::ParseBigIntError),
   #[error("Got signature error, err: {0}")]
-  SignatureError(#[from] signature::Error)
+  SignatureError(#[from] signature::Error),
 }

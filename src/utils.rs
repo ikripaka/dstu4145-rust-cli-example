@@ -5,8 +5,6 @@ use std::path::Path;
 use std::time::Instant;
 use dstu4145_rust::sign::{Signature, SigningKey, VerifyingKey, VerifyingKeyConstructor};
 use gost94::Gost94UA;
-use num_bigint::BigUint;
-use num_traits::Num;
 use poly_algebra::gf::{GFArithmetic, GF163, GF167, GF173, GF179, GF191, GF233, GF257, GF307, GF367, GF431};
 use poly_algebra::helpers::get_string_hex_array_plain;
 use rand_chacha::ChaCha20Rng;
@@ -462,7 +460,7 @@ pub fn verify_ordinary(
   l_d : u64,
 ) -> crate::error::Result<'static, ()>
 {
-  Ok(match ec
+  match ec
   {
     CurveIndex::EcGF163 =>
     {
@@ -595,7 +593,8 @@ pub fn verify_ordinary(
       verifying_key.verify(&msg, &signature)?;
       trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on verifying GF431 signature")
     }
-  })
+  }
+  Ok(())
 }
 
 pub fn verify_original(
@@ -607,7 +606,7 @@ pub fn verify_original(
 ) -> crate::error::Result<'static, ()>
 {
   println!("{sign}");
-  Ok(match ec
+  match ec
   {
     CurveIndex::EcGF163 =>
     {
@@ -759,5 +758,6 @@ pub fn verify_original(
       verifying_key.verify_digest(digest, &signature)?;
       trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on verifying with digest GF431 signature")
     }
-  })
+  }
+  Ok(())
 }

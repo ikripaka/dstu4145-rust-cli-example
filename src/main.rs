@@ -1,7 +1,5 @@
 use std::io::Write;
 use clap::Parser;
-use num_bigint::BigUint;
-use num_traits::Num;
 use tracing_subscriber::{fmt, EnvFilter};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -25,7 +23,7 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
     CliArgs::Sign(option) => match option
     {
       SignCommand::File {
-        filename,
+        filepath: filename,
         ec,
         l_d,
         gost_hash,
@@ -39,13 +37,13 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
           false => sign_ordinary(ec.clone(), l_d, msg),
         }?;
         write_into_stdout(format!(
-          "Program signed file {filename:?} successfully, \
+          "Program signed file {filename:?} successfully ✔️, \
         d: '{priv_key}', packed_pub_key: '{pub_key}', packed_sign: '{sign}', \
         l_d: {l_d}, ec_option: {ec}, gost_hash_flag: {gost_hash}"
         ))?;
       }
-      SignCommand::Text {
-        text,
+      SignCommand::Msg {
+        msg: text,
         ec,
         l_d,
         gost_hash,
@@ -57,7 +55,7 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
           false => sign_ordinary(ec.clone(), l_d, text.as_bytes().to_vec()),
         }?;
         write_into_stdout(format!(
-          "Program signed msg {text} successfully, \
+          "Program signed msg {text} successfully ✔️, \
         d: '{priv_key}', packed_pub_key: '{pub_key}', packed_sign: '{sign}', \
         l_d: {l_d}, ec_option: {ec}"
         ))?;
@@ -68,7 +66,7 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
       VerifyCommand::File {
         verifying_key,
         sign,
-        filename,
+        filepath: filename,
         ec,
         l_d,
         gost_hash,
@@ -81,13 +79,13 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
           false => verify_ordinary(verifying_key, sign, ec, msg, l_d),
         }?;
         write_into_stdout(format!(
-          "Signature verified successfully for file: {filename:?}, gost_hash_flag: {gost_hash}"
+          "Signature verified successfully ✔️ for file: {filename:?}, gost_hash_flag: {gost_hash}"
         ))?;
       }
-      VerifyCommand::Text {
+      VerifyCommand::Msg {
         verifying_key,
         sign,
-        text,
+        msg: text,
         ec,
         l_d,
         gost_hash,
@@ -99,7 +97,7 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
           false => verify_ordinary(verifying_key, sign, ec, text.as_bytes().to_vec(), l_d),
         }?;
         write_into_stdout(format!(
-          "Signature verified successfully for text: {text:?}, gost_hash_flag: {gost_hash}"
+          "Signature verified successfully ✔️ for msg: {text:?}, gost_hash_flag: {gost_hash}"
         ))?;
       }
     },
@@ -107,4 +105,9 @@ fn process_args(cli_args : CliArgs) -> dstu4145_presentation_cli::error::Result<
   Ok(())
 }
 
-fn write_into_stdout<T : AsRef<str>>(text : T) -> std::io::Result<usize> { std::io::stdout().write(text.as_ref().as_bytes()) }
+fn write_into_stdout<T : AsRef<str>>(text : T) -> std::io::Result<usize>
+{
+  let mut output = text.as_ref().to_string();
+  output.push('\n');
+  std::io::stdout().write(output.as_bytes())
+}
