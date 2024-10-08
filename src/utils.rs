@@ -5,6 +5,8 @@ use std::path::Path;
 use std::time::Instant;
 use dstu4145_rust::sign::{Signature, SigningKey, VerifyingKey, VerifyingKeyConstructor};
 use gost94::Gost94UA;
+use num_bigint::BigUint;
+use num_traits::Num;
 use poly_algebra::gf::{GFArithmetic, GF163, GF167, GF173, GF179, GF191, GF233, GF257, GF307, GF367, GF431};
 use poly_algebra::helpers::get_string_hex_array_plain;
 use rand_chacha::ChaCha20Rng;
@@ -41,27 +43,57 @@ pub fn write_file<'a, T : AsRef<Path>>(filepath : &'a T, bytes : &'a [u8]) -> cr
   })
 }
 
+pub fn write_into_stdout<T : AsRef<str>>(text : T) -> std::io::Result<usize>
+{
+  let mut output = text.as_ref().to_string();
+  output.push('\n');
+  std::io::stdout().write(output.as_bytes())
+}
+
 pub fn sign_ordinary_163<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF163>, VerifyingKey<GF163>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m163_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF163");
   Ok((private_key, pub_key, signature))
 }
+
+fn generate_keys<'a, T : GFArithmetic<'a>>(
+  ec : BinaryEC<T>,
+  signing_key_hex : Option<String>,
+  l_d : u64,
+) -> crate::error::Result<'a, (SigningKey<T>, VerifyingKey<T>)>
+{
+  let (sign_key, verifying_key) = match signing_key_hex
+  {
+    None =>
+    {
+      let mut rng = ChaCha20Rng::from_entropy();
+      SigningKey::generate(&mut rng, ec, l_d)
+    }
+    Some(signing_key) =>
+    {
+      let d = BigUint::from_str_radix(&signing_key, 16)?;
+      SigningKey::from_secret(ec, d.to_bytes_be(), l_d)
+    }
+  }?;
+  Ok((sign_key, verifying_key))
+}
+
 pub fn sign_ordinary_167<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF167>, VerifyingKey<GF167>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m167_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF167");
@@ -70,11 +102,11 @@ pub fn sign_ordinary_167<B : AsRef<[u8]>>(
 pub fn sign_ordinary_173<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF173>, VerifyingKey<GF173>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m173_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF173");
@@ -83,11 +115,11 @@ pub fn sign_ordinary_173<B : AsRef<[u8]>>(
 pub fn sign_ordinary_179<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF179>, VerifyingKey<GF179>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m179_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF179");
@@ -96,11 +128,11 @@ pub fn sign_ordinary_179<B : AsRef<[u8]>>(
 pub fn sign_ordinary_191<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF191>, VerifyingKey<GF191>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m191_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF191");
@@ -109,11 +141,11 @@ pub fn sign_ordinary_191<B : AsRef<[u8]>>(
 pub fn sign_ordinary_233<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF233>, VerifyingKey<GF233>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m233_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF233");
@@ -122,11 +154,11 @@ pub fn sign_ordinary_233<B : AsRef<[u8]>>(
 pub fn sign_ordinary_257<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF257>, VerifyingKey<GF257>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m257_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF257");
@@ -135,11 +167,11 @@ pub fn sign_ordinary_257<B : AsRef<[u8]>>(
 pub fn sign_ordinary_307<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF307>, VerifyingKey<GF307>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m307_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF307");
@@ -148,11 +180,11 @@ pub fn sign_ordinary_307<B : AsRef<[u8]>>(
 pub fn sign_ordinary_367<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF367>, VerifyingKey<GF367>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m367_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF367");
@@ -161,11 +193,11 @@ pub fn sign_ordinary_367<B : AsRef<[u8]>>(
 pub fn sign_ordinary_431<B : AsRef<[u8]>>(
   msg : B,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF431>, VerifyingKey<GF431>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m431_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign(msg.as_ref());
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message in GF431");
@@ -175,11 +207,11 @@ pub fn sign_ordinary_431<B : AsRef<[u8]>>(
 pub fn sign_digest_163<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF163>, VerifyingKey<GF163>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m163_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF163");
@@ -188,11 +220,11 @@ pub fn sign_digest_163<D : Digest>(
 pub fn sign_digest_167<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF167>, VerifyingKey<GF167>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m167_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF167");
@@ -201,11 +233,11 @@ pub fn sign_digest_167<D : Digest>(
 pub fn sign_digest_173<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF173>, VerifyingKey<GF173>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m173_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF173");
@@ -214,11 +246,11 @@ pub fn sign_digest_173<D : Digest>(
 pub fn sign_digest_179<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF179>, VerifyingKey<GF179>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m179_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF179");
@@ -227,11 +259,11 @@ pub fn sign_digest_179<D : Digest>(
 pub fn sign_digest_191<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF191>, VerifyingKey<GF191>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m191_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF191");
@@ -240,11 +272,11 @@ pub fn sign_digest_191<D : Digest>(
 pub fn sign_digest_233<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF233>, VerifyingKey<GF233>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m233_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF233");
@@ -253,11 +285,11 @@ pub fn sign_digest_233<D : Digest>(
 pub fn sign_digest_257<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF257>, VerifyingKey<GF257>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m257_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF257");
@@ -266,11 +298,11 @@ pub fn sign_digest_257<D : Digest>(
 pub fn sign_digest_307<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF307>, VerifyingKey<GF307>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m307_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF307");
@@ -279,11 +311,11 @@ pub fn sign_digest_307<D : Digest>(
 pub fn sign_digest_367<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF367>, VerifyingKey<GF367>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m367_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF367");
@@ -292,11 +324,11 @@ pub fn sign_digest_367<D : Digest>(
 pub fn sign_digest_431<D : Digest>(
   digest : D,
   l_d : u64,
+  signing_key : Option<String>,
 ) -> crate::error::Result<'static, (SigningKey<GF431>, VerifyingKey<GF431>, Signature)>
 {
-  let mut rng = ChaCha20Rng::from_entropy();
   let ec = BinaryEC::generate_m431_pb_curve();
-  let (private_key, pub_key) = SigningKey::generate(&mut rng, ec, l_d)?;
+  let (private_key, pub_key) = generate_keys(ec, signing_key, l_d)?;
   let time_before = Instant::now();
   let signature = private_key.sign_digest(digest);
   trace!(time_spent =?{Instant::now().duration_since(time_before)},"Time spent on signing message with digest in GF431");
@@ -317,65 +349,75 @@ pub fn convert_response<'a, T : GFArithmetic<'a>>(
   )
 }
 
-pub fn sign_ordinary(ec : CurveIndex, l_d : u64, msg : Vec<u8>) -> crate::error::Result<'static, (String, String, String)>
+pub fn sign_ordinary(
+  ec : CurveIndex,
+  l_d : u64,
+  msg : Vec<u8>,
+  signing_key : Option<String>,
+) -> crate::error::Result<'static, (String, String, String)>
 {
   Ok(match ec
   {
     CurveIndex::EcGF163 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_163(msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_163(msg, l_d, signing_key)?;
       println!("pub key: {:X}", pub_key.get_pub_key());
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF167 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_167(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_167(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF173 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_173(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_173(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF179 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_179(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_179(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF191 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_191(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_191(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF233 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_233(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_233(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF257 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_257(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_257(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF307 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_307(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_307(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF367 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_367(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_367(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF431 =>
     {
-      let (priv_key, pub_key, sign) = sign_ordinary_431(&msg, l_d)?;
+      let (priv_key, pub_key, sign) = sign_ordinary_431(&msg, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
   })
 }
 
-pub fn sign_original(ec : CurveIndex, l_d : u64, msg : Vec<u8>) -> crate::error::Result<'static, (String, String, String)>
+pub fn sign_original(
+  ec : CurveIndex,
+  l_d : u64,
+  msg : Vec<u8>,
+  signing_key : Option<String>,
+) -> crate::error::Result<'static, (String, String, String)>
 {
   Ok(match ec
   {
@@ -383,70 +425,70 @@ pub fn sign_original(ec : CurveIndex, l_d : u64, msg : Vec<u8>) -> crate::error:
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_163(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_163(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF167 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_167(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_167(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF173 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_173(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_173(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF179 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_179(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_179(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF191 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_191(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_191(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF233 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_233(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_233(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF257 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_257(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_257(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF307 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_307(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_307(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF367 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_367(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_367(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
     CurveIndex::EcGF431 =>
     {
       let mut digest = Gost94UA::new();
       digest.update(msg);
-      let (priv_key, pub_key, sign) = sign_digest_431(digest, l_d)?;
+      let (priv_key, pub_key, sign) = sign_digest_431(digest, l_d, signing_key)?;
       convert_response(priv_key, pub_key, sign)
     }
   })
@@ -605,7 +647,6 @@ pub fn verify_original(
   l_d : u64,
 ) -> crate::error::Result<'static, ()>
 {
-  println!("{sign}");
   match ec
   {
     CurveIndex::EcGF163 =>

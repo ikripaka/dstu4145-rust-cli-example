@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use crate::error::CliError;
+use crate::utils::{read_file, sign_ordinary, sign_original, verify_ordinary, verify_original, write_into_stdout};
 
 #[derive(Serialize, Deserialize, Debug, Parser)]
 pub enum CliArgs
@@ -79,6 +80,9 @@ pub enum SignCommand
     #[arg(short, long)]
     /// Flag that enables usage of GOST hash function usage
     gost_hash : bool,
+    #[arg(short, long)]
+    /// Optional flag that represents usage of already generated verifying key d
+    signing_key : Option<String>,
   },
   #[command(about = "Command to sign message")]
   Msg
@@ -95,6 +99,9 @@ pub enum SignCommand
     #[arg(short, long)]
     /// Flag that enables usage of GOST hash function usage
     gost_hash : bool,
+    #[arg(short, long)]
+    /// Optional flag that represents usage of already generated verifying key d
+    signing_key : Option<String>,
   },
 }
 
@@ -124,4 +131,95 @@ fn check_file(path : &str) -> core::result::Result<PathBuf, String>
   {
     Err(CliError::IncorrectPathToFile(path.clone()).to_string())
   }
+}
+
+pub fn process_args(cli_args : CliArgs) -> crate::error::Result<'static, ()>
+{
+  match cli_args
+  {
+    CliArgs::Sign(option) => match option
+    {
+      SignCommand::File {
+        filepath: filename,
+        ec,
+        l_d,
+        gost_hash,
+        signing_key,
+      } =>
+      {
+        let msg = read_file(filename.clone())?;
+
+        let (priv_key, pub_key, sign) = match gost_hash
+        {
+          true => sign_original(ec.clone(), l_d, msg, signing_key),
+          false => sign_ordinary(ec.clone(), l_d, msg, signing_key),
+        }?;
+        write_into_stdout(format!(
+          "Program signed file {filename:?} successfully ✔️, \
+        d: '{priv_key}', packed_pub_key: '{pub_key}', packed_sign: '{sign}', \
+        l_d: {l_d}, ec_option: {ec}, gost_hash_flag: {gost_hash}"
+        ))?;
+      }
+      SignCommand::Msg {
+        msg: text,
+        ec,
+        l_d,
+        gost_hash,
+        signing_key,
+      } =>
+      {
+        let (priv_key, pub_key, sign) = match gost_hash
+        {
+          true => sign_original(ec.clone(), l_d, text.as_bytes().to_vec(), signing_key),
+          false => sign_ordinary(ec.clone(), l_d, text.as_bytes().to_vec(), signing_key),
+        }?;
+        write_into_stdout(format!(
+          "Program signed msg {text} successfully ✔️, \
+        d: '{priv_key}', packed_pub_key: '{pub_key}', packed_sign: '{sign}', \
+        l_d: {l_d}, ec_option: {ec}"
+        ))?;
+      }
+    },
+    CliArgs::Verify(option) => match option
+    {
+      VerifyCommand::File {
+        verifying_key,
+        sign,
+        filepath: filename,
+        ec,
+        l_d,
+        gost_hash,
+      } =>
+      {
+        let msg = read_file(&filename)?;
+        match gost_hash
+        {
+          true => verify_original(verifying_key, sign, ec, msg, l_d),
+          false => verify_ordinary(verifying_key, sign, ec, msg, l_d),
+        }?;
+        write_into_stdout(format!(
+          "Signature verified successfully ✔️ for file: {filename:?}, gost_hash_flag: {gost_hash}"
+        ))?;
+      }
+      VerifyCommand::Msg {
+        verifying_key,
+        sign,
+        msg: text,
+        ec,
+        l_d,
+        gost_hash,
+      } =>
+      {
+        match gost_hash
+        {
+          true => verify_original(verifying_key, sign, ec, text.as_bytes().to_vec(), l_d),
+          false => verify_ordinary(verifying_key, sign, ec, text.as_bytes().to_vec(), l_d),
+        }?;
+        write_into_stdout(format!(
+          "Signature verified successfully ✔️ for msg: {text:?}, gost_hash_flag: {gost_hash}"
+        ))?;
+      }
+    },
+  };
+  Ok(())
 }
